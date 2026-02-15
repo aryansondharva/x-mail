@@ -1,6 +1,6 @@
 # X-Mail - Advanced Phishing Detection System
 
-A sophisticated web-based phishing detection system that analyzes email content to identify potential phishing attempts using machine learning.
+A sophisticated phishing detection system that analyzes email content to identify potential phishing attempts using machine learning. Available in both Streamlit and Flask versions.
 
 ## 🚀 Features
 
@@ -9,9 +9,17 @@ A sophisticated web-based phishing detection system that analyzes email content 
 - **Modern UI**: Elegant, responsive interface with smooth animations
 - **Professional Design**: Clean color scheme optimized for user experience
 - **File Upload Support**: Train models using CSV datasets
+- **Dual Interface**: Both Streamlit and Flask implementations
 
 ## 🛠️ Technology Stack
 
+### Streamlit Version
+- **Backend**: Python Streamlit
+- **Frontend**: Streamlit components
+- **ML Library**: Scikit-learn
+- **Text Processing**: NLTK
+
+### Flask Version (Current)
 - **Backend**: Python Flask
 - **Frontend**: HTML5, CSS3, JavaScript
 - **ML Library**: Scikit-learn
@@ -43,7 +51,17 @@ A sophisticated web-based phishing detection system that analyzes email content 
 
 ## 🏃‍♂️ Usage
 
-### Running the Application
+### Option 1: Streamlit Version (Original)
+
+1. **Run the Streamlit app**
+   ```bash
+   streamlit run phishing_detection.py
+   ```
+
+2. **Access the application**
+   Open your browser and navigate to `http://localhost:8501`
+
+### Option 2: Flask Version (Current/Recommended)
 
 1. **Start the Flask server**
    ```bash
@@ -53,7 +71,18 @@ A sophisticated web-based phishing detection system that analyzes email content 
 2. **Access the application**
    Open your browser and navigate to `http://localhost:5000`
 
-### Features
+### Features Comparison
+
+| Feature | Streamlit Version | Flask Version |
+|----------|------------------|----------------|
+| UI Framework | Streamlit Components | Custom HTML/CSS/JS |
+| Styling | Default Streamlit | Tailwind CSS + Custom |
+| Animations | Basic | Advanced CSS Animations |
+| Customization | Limited | Full Control |
+| Performance | Good | Optimized |
+| Port | 8501 | 5000 |
+
+### Core Features (Both Versions)
 
 #### Phishing Detection
 - Enter email content in the text area
@@ -104,9 +133,10 @@ The application uses a carefully selected color palette:
 
 ```
 X-mail/
-├── app.py                 # Main Flask application
+├── app.py                 # Flask application (current version)
+├── phishing_detection.py   # Streamlit application (original version)
 ├── templates/
-│   └── index.html         # Frontend interface
+│   └── index.html         # Flask frontend interface
 ├── phishing_model.pkl      # Trained model file
 ├── requirements.txt        # Python dependencies
 ├── logo.JPEG            # Application logo
@@ -115,10 +145,16 @@ X-mail/
 
 ## 🔍 API Endpoints
 
+### Flask Version (Current)
 - `GET /` - Main application page
 - `POST /detect` - Analyze email for phishing
 - `POST /train` - Train new model
 - `GET /logo` - Serve application logo
+
+### Streamlit Version (Original)
+- Automatic page routing via Streamlit
+- Built-in file upload components
+- Integrated model training interface
 
 ## 🤝 Contributing
 
