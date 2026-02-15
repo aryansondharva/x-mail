@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>X-Mail - Phishing Detection</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #A0D2EB 0%, #E5EAF5 100%);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+            color: #494D5F;
+        }
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, 
+                rgba(132, 91, 179, 0.1) 0%, 
+                rgba(229, 234, 245, 0.05) 25%, 
+                rgba(132, 91, 179, 0.1) 50%, 
+                rgba(229, 234, 245, 0.05) 75%, 
+                rgba(132, 91, 179, 0.1) 100%);
+            pointer-events: none;
+        }
+        @keyframes shimmer {
+            0%, 100% { transform: translateX(-100%); }
+            50% { transform: translateX(100%); }
+        }
+        .card {
+            background: rgba(229, 234, 245, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(73, 77, 95, 0.1);
+            border: 1px solid rgba(229, 234, 245, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+        .card::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(45deg, #845BB3, #E5EAF5, #845BB3);
+            border-radius: 20px;
+            opacity: 0;
+            z-index: -1;
+        }
+        @keyframes glow {
+            0%, 100% { opacity: 0; }
+            50% { opacity: 0.3; }
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #845BB3 0%, #D0BDF4 100%);
+            color: #494D5F;
+            padding: 16px 32px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 16px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 10px 25px rgba(132, 91, 179, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+        .btn-primary::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transition: left 0.5s;
+        }
+        .btn-primary:hover::before {
+            left: 100%;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 35px rgba(132, 91, 179, 0.4);
+        }
+        .btn-success {
+            background: linear-gradient(135deg, #845BB3 0%, #D0BDF4 100%);
+            color: #494D5F;
+            padding: 16px 32px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 16px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 10px 25px rgba(132, 91, 179, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+        .btn-success::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transition: left 0.5s;
+        }
+        .btn-success:hover::before {
+            left: 100%;
+        }
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 35px rgba(132, 91, 179, 0.4);
+        }
+        .tab-active {
+            background: linear-gradient(135deg, #845BB3 0%, #D0BDF4 100%);
+            color: #494D5F;
+            box-shadow: 0 8px 20px rgba(132, 91, 179, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+        .tab-active::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+        }
+        @keyframes tabShimmer {
+            0% { left: -100%; }
+            50% { left: 100%; }
+            100% { left: 100%; }
+        }
+        .tab-inactive {
+            background: rgba(229, 234, 245, 0.8);
+            color: #494D5F;
+            backdrop-filter: blur(10px);
+        }
+        .loading {
+            border: 4px solid rgba(229, 234, 245, 0.2);
+            border-top: 4px solid #845BB3;
+            border-radius: 50%;
+            width: 48px;
+            height: 48px;
+            box-shadow: 0 0 20px rgba(132, 91, 179, 0.3);
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .fade-in {
+            animation: fadeIn 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .success-box {
+            background: linear-gradient(135deg, #E5EAF5 0%, #D0BDF4 100%);
+            border-left: 4px solid #845BB3;
+            color: #494D5F;
+            border-radius: 12px;
+            position: relative;
+            overflow: hidden;
+        }
+        .success-box::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(132, 91, 179, 0.1), transparent);
+        }
+        @keyframes successPulse {
+            0%, 100% { left: -100%; }
+            50% { left: 100%; }
+        }
+        .error-box {
+            background: linear-gradient(135deg, #E5EAF5 0%, #A0D2EB 100%);
+            border-left: 4px solid #494D5F;
+            color: #494D5F;
+            border-radius: 12px;
+        }
+        .warning-box {
+            background: linear-gradient(135deg, #E5EAF5 0%, #D0BDF4 100%);
+            border-left: 4px solid #845BB3;
+            color: #494D5F;
+            border-radius: 12px;
+        }
+        .hero-title {
+            font-size: 4rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #494D5F 0%, #845BB3 50%, #A0D2EB 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 10px 30px rgba(73, 77, 95, 0.1);
+        }
+        @keyframes titleGlow {
+            0%, 100% { filter: brightness(1); }
+            50% { filter: brightness(1.2); }
+        }
+        .glass-input {
+            background: rgba(229, 234, 245, 0.9);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(229, 234, 245, 0.3);
+            transition: all 0.3s;
+            position: relative;
+            color: #494D5F;
+        }
+        .glass-input:focus {
+            background: rgba(229, 234, 245, 1);
+            box-shadow: 0 0 0 4px rgba(132, 91, 179, 0.1);
+            border-color: #845BB3;
+        }
+        .upload-area {
+            background: linear-gradient(135deg, rgba(229, 234, 245, 0.9) 0%, rgba(208, 189, 244, 0.9) 100%);
+            backdrop-filter: blur(10px);
+            border: 2px dashed rgba(132, 91, 179, 0.3);
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+        .upload-area::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(132, 91, 179, 0.1), transparent);
+        }
+        @keyframes uploadPulse {
+            0%, 100% { left: -100%; }
+            50% { left: 100%; }
+        }
+        .upload-area:hover {
+            border-color: #845BB3;
+            background: linear-gradient(135deg, rgba(229, 234, 245, 1) 0%, rgba(208, 189, 244, 1) 100%);
+            box-shadow: 0 0 20px rgba(132, 91, 179, 0.1);
+        }
+        .result-card {
+            padding: 32px;
+            border-radius: 16px;
+            position: relative;
+            overflow: hidden;
+        }
+        .result-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #845BB3, #E5EAF5, #845BB3);
+        }
+        @keyframes resultGlow {
+            0%, 100% { opacity: 0.8; }
+            50% { opacity: 1; }
+        }
+        .floating-particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+        .particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: rgba(132, 91, 179, 0.6);
+            border-radius: 50%;
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0) rotate(0deg); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translateY(-100vh) rotate(360deg); opacity: 0; }
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <div class="floating-particles" id="particles"></div>
+    <div class="container mx-auto px-4 py-8 relative z-10">
+        <!-- Header -->
+        <header class="text-center mb-8 fade-in">
+            <div class="flex justify-center mb-4">
+                <img src="/logo" alt="X-Mail Logo" class="w-64 h-64">
+            </div>
+            <p class="text-xl text-gray-600 font-medium">Advanced Phishing Detection System</p>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <div class="max-w-4xl mx-auto mb-8">
+            <div class="card p-2">
+                <div class="flex space-x-2">
+                    <button id="detectTab" class="flex-1 py-3 px-6 rounded-lg font-semibold transition-all duration-200 tab-active" onclick="switchTab('detect')">
+                        <i class="fas fa-search mr-2"></i>Phishing Detection
+                    </button>
+                    <button id="trainTab" class="flex-1 py-3 px-6 rounded-lg font-semibold transition-all duration-200 tab-inactive" onclick="switchTab('train')">
+                        <i class="fas fa-brain mr-2"></i>Train Model
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Detection Panel -->
+        <div id="detectPanel" class="max-w-4xl mx-auto fade-in">
+            <div class="card p-8">
+                <h2 class="text-2xl font-bold mb-6 text-gray-800">
+                    <i class="fas fa-envelope-open-text mr-3 text-indigo-600"></i>
+                    Analyze Email Content
+                </h2>
+                
+                <div class="mb-6">
+                    <label for="emailContent" class="block text-sm font-medium text-gray-700 mb-2">
+                        Enter Email Content:
+                    </label>
+                    <textarea 
+                        id="emailContent" 
+                        rows="8" 
+                        class="w-full px-4 py-3 rounded-lg resize-none glass-input"
+                        placeholder="Paste the email content here for phishing detection..."
+                    ></textarea>
+                </div>
+
+                <button 
+                    onclick="detectPhishing()" 
+                    class="w-full btn-primary"
+                >
+                    <i class="fas fa-shield-virus mr-2"></i>Detect Phishing
+                </button>
+
+                <!-- Loading State -->
+                <div id="loadingState" class="hidden mt-6 text-center">
+                    <div class="loading mx-auto mb-4"></div>
+                    <p class="text-gray-600">Analyzing email content...</p>
+                </div>
+
+                <!-- Result Display -->
+                <div id="resultContainer" class="hidden mt-6 fade-in">
+                    <div class="result-card">
+                        <h3 class="text-xl font-bold mb-3">
+                            <i class="fas fa-clipboard-check mr-2"></i>Analysis Result
+                        </h3>
+                        <div id="resultContent" class="text-lg"></div>
+                    </div>
+                </div>
+
+                <!-- Error Display -->
+                <div id="errorContainer" class="hidden mt-6 fade-in">
+                    <div class="error-box p-4 rounded-lg">
+                        <div class="flex">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-exclamation-triangle text-red-400"></i>
+                            </div>
+                            <div class="ml-3">
+                                <p class="text-sm" id="errorMessage"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Training Panel -->
+        <div id="trainPanel" class="max-w-4xl mx-auto hidden fade-in">
+            <div class="card p-8">
+                <h2 class="text-2xl font-bold mb-6 text-gray-800">
+                    <i class="fas fa-cogs mr-3 text-indigo-600"></i>
+                    Train Phishing Detection Model
+                </h2>
+                
+                <div class="mb-6">
+                    <label for="csvFile" class="block text-sm font-medium text-gray-700 mb-2">
+                        Upload CSV Dataset:
+                    </label>
+                    <div class="relative">
+                        <input 
+                            type="file" 
+                            id="csvFile" 
+                            accept=".csv" 
+                            class="hidden" 
+                            onchange="handleFileSelect(this)"
+                        >
+                        <label 
+                            for="csvFile" 
+                            class="flex items-center justify-center w-full px-4 py-8 rounded-lg cursor-pointer upload-area"
+                        >
+                            <div class="text-center">
+                                <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-3"></i>
+                                <p class="text-gray-600">Click to upload CSV file</p>
+                                <p class="text-sm text-gray-500 mt-1">or drag and drop</p>
+                            </div>
+                        </label>
+                    </div>
+                    <div id="fileInfo" class="mt-3 hidden">
+                        <div class="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
+                            <div class="flex items-center">
+                                <i class="fas fa-file-csv text-green-600 mr-2"></i>
+                                <span id="fileName" class="text-sm font-medium text-gray-700"></span>
+                            </div>
+                            <button onclick="removeFile()" class="text-red-500 hover:text-red-700">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="warning-box p-4 rounded-lg mb-6">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-info-circle text-amber-400"></i>
+                        </div>
+                        <div class="ml-3">
+                            <p class="text-sm">
+                                <strong>Required CSV format:</strong> Your dataset must contain 'email_body' and 'label' columns.
+                                The label should be 0 for safe emails and 1 for phishing emails.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <button 
+                    onclick="trainModel()" 
+                    class="w-full btn-success disabled:opacity-50 disabled:cursor-not-allowed"
+                    id="trainButton"
+                    disabled
+                >
+                    <i class="fas fa-play mr-2"></i>Train Model
+                </button>
+
+                <!-- Training Loading State -->
+                <div id="trainingLoading" class="hidden mt-6 text-center">
+                    <div class="loading mx-auto mb-4"></div>
+                    <p class="text-gray-600">Training model... This may take a few minutes.</p>
+                </div>
+
+                <!-- Training Success -->
+                <div id="trainingSuccess" class="hidden mt-6 fade-in">
+                    <div class="success-box p-4 rounded-lg">
+                        <div class="flex">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-check-circle text-green-400"></i>
+                            </div>
+                            <div class="ml-3">
+                                <p class="text-sm" id="trainingMessage"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Training Error -->
+                <div id="trainingError" class="hidden mt-6 fade-in">
+                    <div class="error-box p-4 rounded-lg">
+                        <div class="flex">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-exclamation-triangle text-red-400"></i>
+                            </div>
+                            <div class="ml-3">
+                                <p class="text-sm" id="trainingErrorMessage"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let selectedFile = null;
+
+        function switchTab(tab) {
+            const detectTab = document.getElementById('detectTab');
+            const trainTab = document.getElementById('trainTab');
+            const detectPanel = document.getElementById('detectPanel');
+            const trainPanel = document.getElementById('trainPanel');
+
+            if (tab === 'detect') {
+                detectTab.className = 'flex-1 py-3 px-6 rounded-lg font-semibold transition-all duration-200 tab-active';
+                trainTab.className = 'flex-1 py-3 px-6 rounded-lg font-semibold transition-all duration-200 tab-inactive';
+                detectPanel.classList.remove('hidden');
+                trainPanel.classList.add('hidden');
+            } else {
+                trainTab.className = 'flex-1 py-3 px-6 rounded-lg font-semibold transition-all duration-200 tab-active';
+                detectTab.className = 'flex-1 py-3 px-6 rounded-lg font-semibold transition-all duration-200 tab-inactive';
+                trainPanel.classList.remove('hidden');
+                detectPanel.classList.add('hidden');
+            }
+        }
+
+        function handleFileSelect(input) {
+            const file = input.files[0];
+            if (file) {
+                selectedFile = file;
+                document.getElementById('fileName').textContent = file.name;
+                document.getElementById('fileInfo').classList.remove('hidden');
+                document.getElementById('trainButton').disabled = false;
+            }
+        }
+
+        function removeFile() {
+            selectedFile = null;
+            document.getElementById('csvFile').value = '';
+            document.getElementById('fileInfo').classList.add('hidden');
+            document.getElementById('trainButton').disabled = true;
+        }
+
+        async function detectPhishing() {
+            const emailContent = document.getElementById('emailContent').value.trim();
+            
+            if (!emailContent) {
+                showError('Please enter email content for analysis.');
+                return;
+            }
+
+            hideAllMessages();
+            document.getElementById('loadingState').classList.remove('hidden');
+
+            try {
+                const response = await fetch('/detect', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email_content: emailContent })
+                });
+
+                const data = await response.json();
+
+                document.getElementById('loadingState').classList.add('hidden');
+
+                if (response.ok) {
+                    showResult(data.result);
+                } else {
+                    showError(data.error || 'An error occurred during analysis.');
+                }
+            } catch (error) {
+                document.getElementById('loadingState').classList.add('hidden');
+                showError('Network error. Please check your connection and try again.');
+            }
+        }
+
+        async function trainModel() {
+            if (!selectedFile) {
+                showTrainingError('Please select a CSV file first.');
+                return;
+            }
+
+            hideAllTrainingMessages();
+            document.getElementById('trainingLoading').classList.remove('hidden');
+            document.getElementById('trainButton').disabled = true;
+
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+
+            try {
+                const response = await fetch('/train', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                document.getElementById('trainingLoading').classList.add('hidden');
+                document.getElementById('trainButton').disabled = false;
+
+                if (response.ok) {
+                    showTrainingSuccess(`Model trained successfully with ${(data.accuracy * 100).toFixed(2)}% accuracy!`);
+                } else {
+                    showTrainingError(data.error || 'An error occurred during training.');
+                }
+            } catch (error) {
+                document.getElementById('trainingLoading').classList.add('hidden');
+                document.getElementById('trainButton').disabled = false;
+                showTrainingError('Network error. Please check your connection and try again.');
+            }
+        }
+
+        function showResult(result) {
+            const resultContainer = document.getElementById('resultContainer');
+            const resultContent = document.getElementById('resultContent');
+            
+            if (result === 'Phishing') {
+                resultContainer.querySelector('div').className = 'result-card error-box';
+                resultContent.innerHTML = `
+                    <div class="flex items-center">
+                        <i class="fas fa-exclamation-triangle text-red-600 text-3xl mr-4"></i>
+                        <div>
+                            <p class="font-bold text-lg">This is a phishing attempt - do not trust this email!</p>
+                        </div>
+                    </div>
+                `;
+            } else {
+                resultContainer.querySelector('div').className = 'result-card success-box';
+                resultContent.innerHTML = `
+                    <div class="flex items-center">
+                        <i class="fas fa-check-circle text-green-600 text-3xl mr-4"></i>
+                        <div>
+                            <p class="font-bold text-lg">✅ SAFE EMAIL - This email is safe to read.</p>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            resultContainer.classList.remove('hidden');
+        }
+
+        function showError(message) {
+            document.getElementById('errorMessage').textContent = message;
+            document.getElementById('errorContainer').classList.remove('hidden');
+        }
+
+        function showTrainingSuccess(message) {
+            document.getElementById('trainingMessage').textContent = message;
+            document.getElementById('trainingSuccess').classList.remove('hidden');
+        }
+
+        function showTrainingError(message) {
+            document.getElementById('trainingErrorMessage').textContent = message;
+            document.getElementById('trainingError').classList.remove('hidden');
+        }
+
+        function hideAllMessages() {
+            document.getElementById('resultContainer').classList.add('hidden');
+            document.getElementById('errorContainer').classList.add('hidden');
+        }
+
+        function hideAllTrainingMessages() {
+            document.getElementById('trainingSuccess').classList.add('hidden');
+            document.getElementById('trainingError').classList.add('hidden');
+        }
+
+        // Create floating particles
+        function createParticles() {
+            const particlesContainer = document.getElementById('particles');
+            for (let i = 0; i < 20; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.top = Math.random() * 100 + '%';
+                particlesContainer.appendChild(particle);
+            }
+        }
+
+        // Initialize particles on page load
+        document.addEventListener('DOMContentLoaded', createParticles);
+    </script>
+</body>
+</html>
