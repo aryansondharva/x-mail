@@ -308,6 +308,9 @@
                     <button id="detectTab" class="flex-1 py-3 px-6 rounded-lg font-semibold transition-all duration-200 tab-active" onclick="switchTab('detect')">
                         <i class="fas fa-search mr-2"></i>Phishing Detection
                     </button>
+                    <button id="batchTab" class="flex-1 py-3 px-6 rounded-lg font-semibold transition-all duration-200 tab-inactive" onclick="switchTab('batch')">
+                        <i class="fas fa-layer-group mr-2"></i>Batch Analysis
+                    </button>
                     <button id="trainTab" class="flex-1 py-3 px-6 rounded-lg font-semibold transition-all duration-200 tab-inactive" onclick="switchTab('train')">
                         <i class="fas fa-brain mr-2"></i>Train Model
                     </button>
@@ -367,6 +370,70 @@
                             </div>
                             <div class="ml-3">
                                 <p class="text-sm" id="errorMessage"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Batch Analysis Panel -->
+        <div id="batchPanel" class="max-w-4xl mx-auto hidden fade-in">
+            <div class="card p-8">
+                <h2 class="text-2xl font-bold mb-6 text-gray-800">
+                    <i class="fas fa-layer-group mr-3 text-indigo-600"></i>
+                    Batch Email Analysis
+                </h2>
+                
+                <div class="mb-6">
+                    <label for="batchEmailContent" class="block text-sm font-medium text-gray-700 mb-2">
+                        Enter Multiple Emails (one per line):
+                    </label>
+                    <textarea 
+                        id="batchEmailContent" 
+                        rows="12" 
+                        class="w-full px-4 py-3 rounded-lg resize-none glass-input"
+                        placeholder="Paste multiple email contents here, one per line...&#10;Email 1 content...&#10;Email 2 content...&#10;Email 3 content..."
+                    ></textarea>
+                    <div class="mt-2 text-sm text-gray-600">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        Maximum 100 emails per batch. Each email should be on a new line.
+                    </div>
+                </div>
+
+                <button 
+                    onclick="batchDetectPhishing()" 
+                    class="w-full btn-primary"
+                >
+                    <i class="fas fa-shield-virus mr-2"></i>Analyze All Emails
+                </button>
+
+                <!-- Batch Loading State -->
+                <div id="batchLoadingState" class="hidden mt-6 text-center">
+                    <div class="loading mx-auto mb-4"></div>
+                    <p class="text-gray-600">Analyzing multiple emails...</p>
+                </div>
+
+                <!-- Batch Result Display -->
+                <div id="batchResultContainer" class="hidden mt-6 fade-in">
+                    <div class="result-card">
+                        <h3 class="text-xl font-bold mb-3">
+                            <i class="fas fa-chart-bar mr-2"></i>Batch Analysis Results
+                        </h3>
+                        <div id="batchSummary" class="mb-4 p-4 bg-gray-50 rounded-lg"></div>
+                        <div id="batchResults" class="space-y-2 max-h-96 overflow-y-auto"></div>
+                    </div>
+                </div>
+
+                <!-- Batch Error Display -->
+                <div id="batchErrorContainer" class="hidden mt-6 fade-in">
+                    <div class="error-box p-4 rounded-lg">
+                        <div class="flex">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-exclamation-triangle text-red-400"></i>
+                            </div>
+                            <div class="ml-3">
+                                <p class="text-sm" id="batchErrorMessage"></p>
                             </div>
                         </div>
                     </div>
@@ -483,21 +550,158 @@
 
         function switchTab(tab) {
             const detectTab = document.getElementById('detectTab');
+            const batchTab = document.getElementById('batchTab');
             const trainTab = document.getElementById('trainTab');
             const detectPanel = document.getElementById('detectPanel');
+            const batchPanel = document.getElementById('batchPanel');
             const trainPanel = document.getElementById('trainPanel');
 
+            // Reset all tabs
+            detectTab.className = 'flex-1 py-3 px-6 rounded-lg font-semibold transition-all duration-200 tab-inactive';
+            batchTab.className = 'flex-1 py-3 px-6 rounded-lg font-semibold transition-all duration-200 tab-inactive';
+            trainTab.className = 'flex-1 py-3 px-6 rounded-lg font-semibold transition-all duration-200 tab-inactive';
+
+            // Hide all panels
+            detectPanel.classList.add('hidden');
+            batchPanel.classList.add('hidden');
+            trainPanel.classList.add('hidden');
+
+            // Activate selected tab
             if (tab === 'detect') {
                 detectTab.className = 'flex-1 py-3 px-6 rounded-lg font-semibold transition-all duration-200 tab-active';
-                trainTab.className = 'flex-1 py-3 px-6 rounded-lg font-semibold transition-all duration-200 tab-inactive';
                 detectPanel.classList.remove('hidden');
-                trainPanel.classList.add('hidden');
+            } else if (tab === 'batch') {
+                batchTab.className = 'flex-1 py-3 px-6 rounded-lg font-semibold transition-all duration-200 tab-active';
+                batchPanel.classList.remove('hidden');
             } else {
                 trainTab.className = 'flex-1 py-3 px-6 rounded-lg font-semibold transition-all duration-200 tab-active';
-                detectTab.className = 'flex-1 py-3 px-6 rounded-lg font-semibold transition-all duration-200 tab-inactive';
                 trainPanel.classList.remove('hidden');
-                detectPanel.classList.add('hidden');
             }
+        }
+
+        async function batchDetectPhishing() {
+            const batchContent = document.getElementById('batchEmailContent').value.trim();
+            
+            if (!batchContent) {
+                showBatchError('Please enter email content for batch analysis.');
+                return;
+            }
+
+            const emails = batchContent.split('\n').filter(email => email.trim().length > 0);
+            
+            if (emails.length === 0) {
+                showBatchError('Please enter at least one email for analysis.');
+                return;
+            }
+
+            if (emails.length > 100) {
+                showBatchError('Maximum 100 emails allowed per batch. Please reduce the number of emails.');
+                return;
+            }
+
+            hideAllBatchMessages();
+            document.getElementById('batchLoadingState').classList.remove('hidden');
+
+            try {
+                const response = await fetch('/batch_detect', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ emails: emails })
+                });
+
+                const data = await response.json();
+
+                document.getElementById('batchLoadingState').classList.add('hidden');
+
+                if (response.ok) {
+                    showBatchResults(data);
+                } else {
+                    showBatchError(data.error || 'An error occurred during batch analysis.');
+                }
+            } catch (error) {
+                document.getElementById('batchLoadingState').classList.add('hidden');
+                showBatchError('Network error. Please check your connection and try again.');
+            }
+        }
+
+        function showBatchResults(data) {
+            const batchResultContainer = document.getElementById('batchResultContainer');
+            const batchSummary = document.getElementById('batchSummary');
+            const batchResults = document.getElementById('batchResults');
+
+            // Show summary
+            batchSummary.innerHTML = `
+                <div class="grid grid-cols-4 gap-4 text-center">
+                    <div class="bg-blue-50 p-3 rounded">
+                        <div class="text-2xl font-bold text-blue-600">${data.summary.total}</div>
+                        <div class="text-xs text-gray-600">Total Emails</div>
+                    </div>
+                    <div class="bg-green-50 p-3 rounded">
+                        <div class="text-2xl font-bold text-green-600">${data.summary.safe}</div>
+                        <div class="text-xs text-gray-600">Safe</div>
+                    </div>
+                    <div class="bg-red-50 p-3 rounded">
+                        <div class="text-2xl font-bold text-red-600">${data.summary.phishing}</div>
+                        <div class="text-xs text-gray-600">Phishing</div>
+                    </div>
+                    <div class="bg-yellow-50 p-3 rounded">
+                        <div class="text-2xl font-bold text-yellow-600">${data.summary.errors}</div>
+                        <div class="text-xs text-gray-600">Errors</div>
+                    </div>
+                </div>
+            `;
+
+            // Show individual results
+            batchResults.innerHTML = '';
+            data.results.forEach(result => {
+                const resultDiv = document.createElement('div');
+                resultDiv.className = 'p-3 rounded border';
+                
+                if (result.error) {
+                    resultDiv.className += ' border-yellow-300 bg-yellow-50';
+                    resultDiv.innerHTML = `
+                        <div class="flex items-center">
+                            <i class="fas fa-exclamation-circle text-yellow-600 mr-2"></i>
+                            <span class="font-medium">Email #${result.index + 1}:</span>
+                            <span class="ml-2 text-sm text-red-600">${result.error}</span>
+                        </div>
+                    `;
+                } else {
+                    const isPhishing = result.result.result === 'Phishing';
+                    resultDiv.className += isPhishing ? ' border-red-300 bg-red-50' : ' border-green-300 bg-green-50';
+                    resultDiv.innerHTML = `
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center">
+                                <i class="fas ${isPhishing ? 'fa-exclamation-triangle text-red-600' : 'fa-check-circle text-green-600'} mr-2"></i>
+                                <span class="font-medium">Email #${result.index + 1}:</span>
+                                <span class="ml-2 ${isPhishing ? 'text-red-600 font-bold' : 'text-green-600 font-bold'}">
+                                    ${result.result.result}
+                                </span>
+                            </div>
+                            <div class="text-sm">
+                                <span class="font-medium">${result.result.confidence}%</span>
+                                <span class="text-gray-500 ml-1">confidence</span>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                batchResults.appendChild(resultDiv);
+            });
+
+            batchResultContainer.classList.remove('hidden');
+        }
+
+        function showBatchError(message) {
+            document.getElementById('batchErrorMessage').textContent = message;
+            document.getElementById('batchErrorContainer').classList.remove('hidden');
+        }
+
+        function hideAllBatchMessages() {
+            document.getElementById('batchResultContainer').classList.add('hidden');
+            document.getElementById('batchErrorContainer').classList.add('hidden');
         }
 
         function handleFileSelect(input) {
@@ -577,7 +781,7 @@
                 document.getElementById('trainButton').disabled = false;
 
                 if (response.ok) {
-                    showTrainingSuccess(`Model trained successfully with ${(data.accuracy * 100).toFixed(2)}% accuracy!`);
+                    showTrainingSuccess(data);
                 } else {
                     showTrainingError(data.error || 'An error occurred during training.');
                 }
@@ -592,23 +796,57 @@
             const resultContainer = document.getElementById('resultContainer');
             const resultContent = document.getElementById('resultContent');
             
-            if (result === 'Phishing') {
+            if (result.result === 'Phishing') {
                 resultContainer.querySelector('div').className = 'result-card error-box';
                 resultContent.innerHTML = `
-                    <div class="flex items-center">
-                        <i class="fas fa-exclamation-triangle text-red-600 text-3xl mr-4"></i>
-                        <div>
-                            <p class="font-bold text-lg">This is a phishing attempt - do not trust this email!</p>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <i class="fas fa-exclamation-triangle text-red-600 text-3xl mr-4"></i>
+                            <div>
+                                <p class="font-bold text-lg">⚠️ PHISHING ATTEMPT DETECTED!</p>
+                                <p class="text-sm mt-1">This email shows signs of phishing - do not trust it!</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-2xl font-bold text-red-600">${result.confidence}%</div>
+                            <div class="text-xs text-gray-600">Confidence</div>
+                        </div>
+                    </div>
+                    <div class="mt-4 pt-4 border-t border-red-200">
+                        <div class="flex justify-between text-sm">
+                            <span>Safe Probability:</span>
+                            <span class="font-medium">${result.probabilities.safe}%</span>
+                        </div>
+                        <div class="flex justify-between text-sm mt-1">
+                            <span>Phishing Probability:</span>
+                            <span class="font-medium text-red-600">${result.probabilities.phishing}%</span>
                         </div>
                     </div>
                 `;
             } else {
                 resultContainer.querySelector('div').className = 'result-card success-box';
                 resultContent.innerHTML = `
-                    <div class="flex items-center">
-                        <i class="fas fa-check-circle text-green-600 text-3xl mr-4"></i>
-                        <div>
-                            <p class="font-bold text-lg"> SAFE EMAIL - This email is safe to read.</p>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <i class="fas fa-check-circle text-green-600 text-3xl mr-4"></i>
+                            <div>
+                                <p class="font-bold text-lg">✅ SAFE EMAIL</p>
+                                <p class="text-sm mt-1">This email appears to be safe to read.</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-2xl font-bold text-green-600">${result.confidence}%</div>
+                            <div class="text-xs text-gray-600">Confidence</div>
+                        </div>
+                    </div>
+                    <div class="mt-4 pt-4 border-t border-green-200">
+                        <div class="flex justify-between text-sm">
+                            <span>Safe Probability:</span>
+                            <span class="font-medium text-green-600">${result.probabilities.safe}%</span>
+                        </div>
+                        <div class="flex justify-between text-sm mt-1">
+                            <span>Phishing Probability:</span>
+                            <span class="font-medium">${result.probabilities.phishing}%</span>
                         </div>
                     </div>
                 `;
@@ -622,8 +860,43 @@
             document.getElementById('errorContainer').classList.remove('hidden');
         }
 
-        function showTrainingSuccess(message) {
-            document.getElementById('trainingMessage').textContent = message;
+        function showTrainingSuccess(data) {
+            const trainingMessage = document.getElementById('trainingMessage');
+            const metricsHtml = `
+                <div class="space-y-3">
+                    <div class="text-lg font-bold text-green-700">
+                        🎉 Model trained successfully!
+                    </div>
+                    <div class="grid grid-cols-2 gap-4 text-sm">
+                        <div class="bg-blue-50 p-3 rounded">
+                            <div class="font-semibold text-blue-700">Accuracy</div>
+                            <div class="text-xl font-bold text-blue-900">${(data.accuracy * 100).toFixed(2)}%</div>
+                        </div>
+                        <div class="bg-green-50 p-3 rounded">
+                            <div class="font-semibold text-green-700">Precision</div>
+                            <div class="text-xl font-bold text-green-900">${(data.precision * 100).toFixed(2)}%</div>
+                        </div>
+                        <div class="bg-yellow-50 p-3 rounded">
+                            <div class="font-semibold text-yellow-700">Recall</div>
+                            <div class="text-xl font-bold text-yellow-900">${(data.recall * 100).toFixed(2)}%</div>
+                        </div>
+                        <div class="bg-purple-50 p-3 rounded">
+                            <div class="font-semibold text-purple-700">F1 Score</div>
+                            <div class="text-xl font-bold text-purple-900">${(data.f1_score * 100).toFixed(2)}%</div>
+                        </div>
+                    </div>
+                    ${data.confusion_matrix_plot ? `
+                        <div class="mt-4">
+                            <div class="font-semibold text-gray-700 mb-2">Confusion Matrix:</div>
+                            <img src="data:image/png;base64,${data.confusion_matrix_plot}" alt="Confusion Matrix" class="max-w-full h-auto rounded border">
+                        </div>
+                    ` : ''}
+                    <div class="mt-3 text-xs text-gray-600">
+                        <strong>Classification Report:</strong> Detailed metrics available in API response
+                    </div>
+                </div>
+            `;
+            trainingMessage.innerHTML = metricsHtml;
             document.getElementById('trainingSuccess').classList.remove('hidden');
         }
 
