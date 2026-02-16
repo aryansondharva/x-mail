@@ -24,27 +24,11 @@ from logging.handlers import RotatingFileHandler
 import os
 from datetime import datetime
 
-# Initialize rate limiter
-limiter = Limiter(
-    app,
-    key_func=get_remote_address,
-    default_limits=["100 per hour", "10 per minute"]
-)
-
-# Download NLTK data
-try:
-    nltk.data.find('corpora/stopwords')
-except LookupError:
-    nltk.download('stopwords')
-
-# Load stopwords
-STOPWORDS = set(stopwords.words("english"))
-
 app = Flask(__name__)
 
 # Initialize rate limiter after app creation
 limiter = Limiter(
-    app,
+    app=app,
     key_func=get_remote_address,
     default_limits=["100 per hour", "10 per minute"]
 )
@@ -91,6 +75,15 @@ def setup_logging():
     return security_logger, model_logger
 
 security_logger, model_logger = setup_logging()
+
+# Download NLTK data
+try:
+    nltk.data.find('corpora/stopwords')
+except LookupError:
+    nltk.download('stopwords')
+
+# Load stopwords
+STOPWORDS = set(stopwords.words("english"))
 
 import bleach
 from html import unescape
