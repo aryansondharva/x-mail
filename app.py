@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request, jsonify, send_from_directory
+from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 import pandas as pd
@@ -25,6 +26,9 @@ import os
 from datetime import datetime
 
 app = Flask(__name__)
+
+# Enable CORS
+CORS(app)
 
 # Initialize rate limiter after app creation
 limiter = Limiter(
@@ -92,7 +96,7 @@ def validate_and_sanitize_email(email_body):
     if not email_body or not isinstance(email_body, str):
         raise ValueError("Email content must be a non-empty string")
     
-    if len(email_body.strip()) < 10:
+    if len(email_body.strip()) < 5:
         raise ValueError("Email content is too short for meaningful analysis")
     
     if len(email_body) > 50000:
@@ -107,7 +111,7 @@ def validate_and_sanitize_email(email_body):
     
     sanitized = unescape(sanitized)
     
-    if len(sanitized.strip()) < 10:
+    if len(sanitized.strip()) < 5:
         raise ValueError("Email content contains insufficient valid text after sanitization")
     
     return sanitized
@@ -121,7 +125,7 @@ def clean_email_body(email_body):
     cleaned_body = re.sub(r'[^a-zA-Z\s]', '', sanitized_body)
     cleaned_body = ' '.join([word.lower() for word in cleaned_body.split() if word.lower() not in STOPWORDS])
     
-    if len(cleaned_body.strip()) < 5:
+    if len(cleaned_body.strip()) < 3:
         raise ValueError("Email content contains insufficient meaningful text after processing")
     
     return cleaned_body

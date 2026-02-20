@@ -746,7 +746,7 @@
                 document.getElementById('loadingState').classList.add('hidden');
 
                 if (response.ok) {
-                    showResult(data.result);
+                    showResult(data);
                 } else {
                     showError(data.error || 'An error occurred during analysis.');
                 }
