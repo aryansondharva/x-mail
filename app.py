@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, jsonify, send_from_directory
 from flask_cors import CORS
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
+# from flask_limiter import Limiter
+# from flask_limiter.util import get_remote_address
 import pandas as pd
 import numpy as np
 import re
@@ -30,12 +30,12 @@ app = Flask(__name__)
 # Enable CORS
 CORS(app)
 
-# Initialize rate limiter after app creation
-limiter = Limiter(
-    app=app,
-    key_func=get_remote_address,
-    default_limits=["100 per hour", "10 per minute"]
-)
+# Initialize rate limiter after app creation (DISABLED for Python 3.13 compatibility)
+# limiter = Limiter(
+#     app=app,
+#     key_func=get_remote_address,
+#     default_limits=["100 per hour", "10 per minute"]
+# )
 
 # Setup comprehensive logging
 def setup_logging():
@@ -383,7 +383,7 @@ def index():
     return render_template('index.html')
 
 @app.route('/detect', methods=['POST'])
-@limiter.limit("30 per minute")
+# @limiter.limit("30 per minute")  # Disabled for Python 3.13 compatibility
 def detect_phishing():
     client_ip = request.remote_addr
     try:
@@ -413,7 +413,7 @@ def detect_phishing():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/batch_detect', methods=['POST'])
-@limiter.limit("10 per minute")
+# @limiter.limit("10 per minute")  # Disabled for Python 3.13 compatibility
 def batch_detect_phishing():
     client_ip = request.remote_addr
     try:
@@ -477,7 +477,7 @@ def batch_detect_phishing():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/train', methods=['POST'])
-@limiter.limit("5 per hour")
+# @limiter.limit("5 per hour")  # Disabled for Python 3.13 compatibility
 def train():
     client_ip = request.remote_addr
     try:
@@ -522,7 +522,7 @@ def train():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/docs')
-@limiter.limit("60 per minute")
+# @limiter.limit("60 per minute")  # Disabled for Python 3.13 compatibility
 def api_docs():
     """API Documentation Endpoint"""
     docs = {
